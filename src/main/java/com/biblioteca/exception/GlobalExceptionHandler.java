@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(RecursoNaoEncontradoException.class)
+    @ExceptionHandler(com.biblioteca.exception.RecursoNaoEncontradoException.class)
     public ResponseEntity<ApiResponse<Void>> handleRecursoNaoEncontradoException(RecursoNaoEncontradoException e) {
         log.warn("Recurso não encontrado: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.erro(e.getMessage()));
