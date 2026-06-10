@@ -76,4 +76,47 @@ public class EmprestimoService {
         
         return salvo;
     }
+
+    @Transactional
+    public Emprestimo devolver(Long emprestimoId) {
+        Emprestimo emprestimo = buscarPorId(emprestimoId);
+        if (emprestimo.getDevolvido()) {
+            throw new RegraDeNegocioException("Empréstimo já foi encerrado");
+        }
+
+        long diasAtraso = java.time.temporal.ChronoUnit.DAYS.between(emprestimo.getDataPrevistaDevolucao(), LocalDate.now());
+        if (diasAtraso > 0) {
+            emprestimo.setMulta(diasAtraso * 1.0);
+        }
+
+        emprestimo.setDataDevolvido(LocalDate.now());
+        emprestimo.setDevolvido(true);
+
+        Obra obra = emprestimo.getObra();
+        obra.setQuantidadeDisponivel(obra.getQuantidadeDisponivel() + 1);
+        obraRepository.save(obra);
+
+        Emprestimo salvo = emprestimoRepository.save(emprestimo);
+        log.info("Empréstimo {} devolvido. Multa: R${}, Obra: {}", emprestimoId, salvo.getMulta(), obra.getCodigo());
+        return salvo;
+    }
+
+    public List<Emprestimo> listarAtivos() {
+        return emprestimoRepository.findByDevolvidoFalse();
+    }
+
+    public List<Emprestimo> listarAtrasados() {
+        return emprestimoRepository.findByDevolvidoFalseAndDataPrevistaDevolucaoBefore(LocalDate.now());
+    }
+
+    public List<Emprestimo> listarPorCliente(String matricula) {
+        Cliente cliente = clienteRepository.findByMatricula(matricula)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Cliente não encontrado com a matrícula: " + matricula));
+        return emprestimoRepository.findByCliente(cliente);
+    }
+
+    public Emprestimo buscarPorId(Long id) {
+        return emprestimoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Empréstimo não encontrado: " + id));
+    }
 }
